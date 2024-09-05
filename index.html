@@ -186,6 +186,20 @@
 
         return schedule;
       }
+
+      function checkEarlyWin(matches) {
+        let winsA = 0;
+        let winsB = 0;
+        for (let i = 0; i < matches.length; i++) {
+          if (matches[i].scoreA > matches[i].scoreB) winsA++;
+          else if (matches[i].scoreB > matches[i].scoreA) winsB++;
+
+          if (winsA >= 3 || winsB >= 3) return i + 1;
+          if (i === 3 && (winsA === 2 || winsB === 2)) return 5;
+        }
+        return 5;
+      }
+
       function displaySchedule(schedule) {
         const container = document.getElementById("scheduleContainer");
         container.innerHTML = ""; // Clear existing content
@@ -247,14 +261,23 @@
           container.appendChild(slotDiv);
         });
 
-        // Add event listeners for auto-save
+        // Modify the event listeners for auto-save
         const editableScores = document.querySelectorAll(".editable-score");
         editableScores.forEach((score) => {
-          score.addEventListener(
-            "input",
-            debounce(saveScoresToLocalStorage, 500)
-          );
+          score.addEventListener("blur", handleScoreChange);
         });
+      }
+
+      function handleScoreChange(event) {
+        const score = event.target;
+        const value = score.textContent.trim();
+        const numericValue = value === "" ? 0 : parseInt(value, 10);
+
+        // Ensure the displayed value is always a number
+        score.textContent = isNaN(numericValue) ? "0" : numericValue.toString();
+
+        // Save the changes
+        saveScoresToLocalStorage();
       }
 
       function calculateDivisionStats(schedule) {
@@ -344,8 +367,14 @@
             if (scores[matchup.id]) {
               matchup.matches = matchup.matches.map((match, index) => {
                 if (scores[matchup.id][index]) {
-                  match.scoreA = scores[matchup.id][index].A || match.scoreA;
-                  match.scoreB = scores[matchup.id][index].B || match.scoreB;
+                  match.scoreA =
+                    scores[matchup.id][index].A !== undefined
+                      ? scores[matchup.id][index].A
+                      : match.scoreA;
+                  match.scoreB =
+                    scores[matchup.id][index].B !== undefined
+                      ? scores[matchup.id][index].B
+                      : match.scoreB;
                 }
                 return match;
               });
@@ -389,7 +418,8 @@
           const matchupId = score.dataset.matchupId;
           const matchIndex = score.dataset.matchIndex;
           const team = score.dataset.team;
-          const value = parseInt(score.textContent, 10) || 0;
+          const value = score.textContent.trim();
+          const numericValue = value === "" ? 0 : parseInt(value, 10);
 
           if (!scores[matchupId]) {
             scores[matchupId] = {};
@@ -397,7 +427,8 @@
           if (!scores[matchupId][matchIndex]) {
             scores[matchupId][matchIndex] = {};
           }
-          scores[matchupId][matchIndex][team] = value;
+
+          scores[matchupId][matchIndex][team] = numericValue;
         });
 
         localStorage.setItem("matchScores", JSON.stringify(scores));
@@ -408,15 +439,6 @@
         // Recalculate and display stats
         const updatedStats = calculateDivisionStats(schedule);
         displayDivisionStats(updatedStats);
-      }
-
-      // Debounce function to limit the frequency of auto-save
-      function debounce(func, delay) {
-        let timeoutId;
-        return function (...args) {
-          clearTimeout(timeoutId);
-          timeoutId = setTimeout(() => func.apply(this, args), delay);
-        };
       }
 
       // Load saved scores from localStorage
