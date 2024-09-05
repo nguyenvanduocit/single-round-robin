@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Round-robin Match Schedule - Single Table</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      h1,
+      h2 {
+        text-align: center;
+      }
+      .schedule {
+        margin-bottom: 20px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 10px;
+      }
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
+      th {
+        background-color: #f2f2f2;
+      }
+      tr.gray-row {
+        background-color: #f0f0f0;
+      }
+
+      .editable-score {
+        display: inline-block;
+        min-width: 30px;
+        padding: 2px 5px;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        text-align: center;
+      }
+
+      .editable-score:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Round-robin Match Schedule</h1>
+    <div id="scheduleContainer"></div>
+    <h2>Division Statistics</h2>
+    <div id="statsContainer"></div>
+    <button id="regenerateButton">Regenerate Schedule</button>
+    <button id="resetScoresButton">Reset Scores</button>
+
+    <script>
+      const divisions = [
+        {
+          name: "Compass",
+          teams: [
+            "Compass-1",
+            "Compass-2",
+            "Compass-3",
+            "Compass-4",
+            "Compass-5",
+          ],
+        },
+        {
+          name: "Manysales",
+          teams: [
+            "Manysale-1",
+            "Manysales-2",
+            "Manysale-3",
+            "Manysale-4",
+            "Manysale-5",
+          ],
+        },
+        {
+          name: "CustomerService",
+          teams: [
+            "CustomerService-1",
+            "CustomerService-2",
+            "CustomerService-3",
+            "CustomerService-4",
+            "CustomerService-5",
+          ],
+        },
+        {
+          name: "OneExperts",
+          teams: [
+            "OneExperts-1",
+            "OneExperts-2",
+            "OneExperts-3",
+            "OneExperts-4",
+            "OneExperts-5",
+          ],
+        },
+        {
+          name: "FireGroupTech",
+          teams: [
+            "FireGroupTech-1",
+            "FireGroupTech-2",
+            "FireGroupTech-3",
+            "FireGroupTech-4",
+            "FireGroupTech-5",
+          ],
+        },
+      ];
+
+      function generateSchedule(divisions) {
+        const schedule = [];
+        const n = divisions.length;
+        const timeSlots = ["Monday-Afternoon", "Thursday-Afternoon"];
+        let currentTimeSlotIndex = 0;
+
+        for (let i = 0; i < n; i++) {
+          for (let j = i + 1; j < n; j++) {
+            const divA = divisions[i];
+            const divB = divisions[j];
+            const matches = [];
+
+            // Tách các đội thành hai nhóm
+            const teamsA123 = divA.teams.slice(0, 3);
+            const teamsA45 = divA.teams.slice(3);
+            const teamsB123 = divB.teams.slice(0, 3);
+            const teamsB45 = divB.teams.slice(3);
+
+            // Tạo trận đấu cho nhóm 1-2-3
+            for (let k = 0; k < 3; k++) {
+              const randomIndexA = Math.floor(Math.random() * teamsA123.length);
+              const randomIndexB = Math.floor(Math.random() * teamsB123.length);
+              matches.push({
+                teamA: teamsA123[randomIndexA],
+                teamB: teamsB123[randomIndexB],
+                scoreA: Math.floor(Math.random() * 11), // 0-10 points
+                scoreB: Math.floor(Math.random() * 11), // 0-10 points
+              });
+              teamsA123.splice(randomIndexA, 1);
+              teamsB123.splice(randomIndexB, 1);
+            }
+
+            // Xáo trộn thứ tự các trận đấu cho nhóm 1-2-3
+            for (let k = matches.length - 1; k > 0; k--) {
+              const l = Math.floor(Math.random() * (k + 1));
+              [matches[k], matches[l]] = [matches[l], matches[k]];
+            }
+
+            // Tạo trận đấu cho nhóm 4-5 và thêm vào cuối
+            for (let k = 0; k < 2; k++) {
+              const randomIndexA = Math.floor(Math.random() * teamsA45.length);
+              const randomIndexB = Math.floor(Math.random() * teamsB45.length);
+              matches.push({
+                teamA: teamsA45[randomIndexA],
+                teamB: teamsB45[randomIndexB],
+                scoreA: Math.floor(Math.random() * 11), // 0-10 points
+                scoreB: Math.floor(Math.random() * 11), // 0-10 points
+              });
+              teamsA45.splice(randomIndexA, 1);
+              teamsB45.splice(randomIndexB, 1);
+            }
+
+            schedule.push({
+              id: `${divA.name}-${divB.name}`, // Add a unique ID for each matchup
+              divA: divA.name,
+              divB: divB.name,
+              matches,
+              timeSlot: timeSlots[currentTimeSlotIndex],
+            });
+            currentTimeSlotIndex =
+              (currentTimeSlotIndex + 1) % timeSlots.length;
+          }
+        }
+
+        // Xáo trộn thứ tự các cặp đấu
+        for (let i = schedule.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [schedule[i], schedule[j]] = [schedule[j], schedule[i]];
+        }
+
+        return schedule;
+      }
+      function displaySchedule(schedule) {
+        const container = document.getElementById("scheduleContainer");
+        container.innerHTML = ""; // Clear existing content
+
+        const timeSlots = ["Monday-Afternoon", "Thursday-Afternoon"];
+        timeSlots.forEach((slot) => {
+          const slotDiv = document.createElement("div");
+          slotDiv.className = "time-slot";
+          slotDiv.innerHTML = `<h2>${slot}</h2>`;
+
+          const matchupsInSlot = schedule.filter(
+            (matchup) => matchup.timeSlot === slot
+          );
+          matchupsInSlot.forEach((matchup, index) => {
+            const matchupDiv = document.createElement("div");
+            matchupDiv.className = "matchup";
+            matchupDiv.innerHTML = `
+                <h3>Cặp đấu ${index + 1}: ${matchup.divA} vs ${
+              matchup.divB
+            }</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Trận</th>
+                            <th>Đội A</th>
+                            <th>Score</th>
+                            <th>Score</th>
+                            <th>Đội B</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${matchup.matches
+                          .map(
+                            (match, i) => `
+                            <tr class="${i >= 3 ? "gray-row" : ""}">
+                                <td>${i + 1}</td>
+                                <td>${match.teamA}</td>
+                                <td style="text-align: center;"><span contenteditable="true" class="editable-score" data-matchup-id="${
+                                  matchup.id
+                                }" data-match-index="${i}" data-team="A">${
+                              match.scoreA
+                            }</span></td>
+                                <td style="text-align: center;"><span contenteditable="true" class="editable-score" data-matchup-id="${
+                                  matchup.id
+                                }" data-match-index="${i}" data-team="B">${
+                              match.scoreB
+                            }</span></td>
+                                <td>${match.teamB}</td>
+                            </tr>
+                        `
+                          )
+                          .join("")}
+                    </tbody>
+                </table>
+            `;
+            slotDiv.appendChild(matchupDiv);
+          });
+
+          container.appendChild(slotDiv);
+        });
+
+        // Add event listeners for auto-save
+        const editableScores = document.querySelectorAll(".editable-score");
+        editableScores.forEach((score) => {
+          score.addEventListener(
+            "input",
+            debounce(saveScoresToLocalStorage, 500)
+          );
+        });
+      }
+
+      function calculateDivisionStats(schedule) {
+        const stats = {};
+        divisions.forEach((div) => {
+          stats[div.name] = {
+            opponents: new Set(),
+            scoreDiff: 0,
+            winCount: 0,
+          };
+        });
+
+        schedule.forEach((matchup) => {
+          stats[matchup.divA].opponents.add(matchup.divB);
+          stats[matchup.divB].opponents.add(matchup.divA);
+
+          matchup.matches.forEach((match) => {
+            stats[matchup.divA].scoreDiff += match.scoreA - match.scoreB;
+            stats[matchup.divB].scoreDiff += match.scoreB - match.scoreA;
+
+            // Tính số trận thắng
+            if (match.scoreA > match.scoreB) {
+              stats[matchup.divA].winCount++;
+              stats[matchup.divB].winCount--;
+            } else if (match.scoreB > match.scoreA) {
+              stats[matchup.divB].winCount++;
+              stats[matchup.divA].winCount--;
+            }
+          });
+        });
+
+        // Chuyển đổi Set thành số lượng đối thủ
+        Object.keys(stats).forEach((div) => {
+          stats[div].opponents = stats[div].opponents.size;
+        });
+
+        return stats;
+      }
+
+      function displayDivisionStats(stats) {
+        const container = document.getElementById("statsContainer");
+        container.innerHTML = "";
+        const table = document.createElement("table");
+        table.innerHTML = `
+          <thead>
+              <tr>
+                  <th>Division</th>
+                  <th>Số division đã đối đầu</th>
+            
+                <th>Số trận thắng</th>
+                <th>Score +/-</th>
+              </tr>
+          </thead>
+          <tbody>
+              ${Object.entries(stats)
+                .map(
+                  ([division, data]) => `
+                  <tr>
+                      <td>${division}</td>
+                      <td>${data.opponents}</td>
+                      <td>${data.winCount}</td>
+                      <td>${data.scoreDiff}</td>
+
+                  </tr>
+              `
+                )
+                .join("")}
+          </tbody>
+        `;
+        container.appendChild(table);
+      }
+
+      function saveScheduleToLocalStorage(schedule) {
+        localStorage.setItem("matchSchedule", JSON.stringify(schedule));
+      }
+
+      function loadScheduleFromLocalStorage() {
+        const savedSchedule = localStorage.getItem("matchSchedule");
+        return savedSchedule ? JSON.parse(savedSchedule) : null;
+      }
+
+      function updateScheduleWithSavedScores(schedule) {
+        const savedScores = localStorage.getItem("matchScores");
+        if (savedScores) {
+          const scores = JSON.parse(savedScores);
+          return schedule.map((matchup) => {
+            if (scores[matchup.id]) {
+              matchup.matches = matchup.matches.map((match, index) => {
+                if (scores[matchup.id][index]) {
+                  match.scoreA = scores[matchup.id][index].A || match.scoreA;
+                  match.scoreB = scores[matchup.id][index].B || match.scoreB;
+                }
+                return match;
+              });
+            }
+            return matchup;
+          });
+        }
+        return schedule;
+      }
+
+      const savedSchedule = loadScheduleFromLocalStorage();
+      let schedule = savedSchedule || generateSchedule(divisions);
+      displaySchedule(schedule);
+      loadSavedScores();
+      schedule = updateScheduleWithSavedScores(schedule);
+      const stats = calculateDivisionStats(schedule);
+      displayDivisionStats(stats);
+
+      // Lưu lịch vào localStorage
+      saveScheduleToLocalStorage(schedule);
+
+      // Thêm sự kiện cho nút tái tạo
+      document
+        .getElementById("regenerateButton")
+        .addEventListener("click", () => {
+          const container = document.getElementById("scheduleContainer");
+          container.innerHTML = ""; // Xóa nội dung hiện tại
+
+          const newSchedule = generateSchedule(divisions);
+          displaySchedule(newSchedule);
+          const newStats = calculateDivisionStats(newSchedule);
+          displayDivisionStats(newStats);
+          saveScheduleToLocalStorage(newSchedule);
+        });
+
+      function saveScoresToLocalStorage() {
+        const editableScores = document.querySelectorAll(".editable-score");
+        const scores = {};
+
+        editableScores.forEach((score) => {
+          const matchupId = score.dataset.matchupId;
+          const matchIndex = score.dataset.matchIndex;
+          const team = score.dataset.team;
+          const value = parseInt(score.textContent, 10) || 0;
+
+          if (!scores[matchupId]) {
+            scores[matchupId] = {};
+          }
+          if (!scores[matchupId][matchIndex]) {
+            scores[matchupId][matchIndex] = {};
+          }
+          scores[matchupId][matchIndex][team] = value;
+        });
+
+        localStorage.setItem("matchScores", JSON.stringify(scores));
+
+        // Update schedule with new scores
+        schedule = updateScheduleWithSavedScores(schedule);
+
+        // Recalculate and display stats
+        const updatedStats = calculateDivisionStats(schedule);
+        displayDivisionStats(updatedStats);
+      }
+
+      // Debounce function to limit the frequency of auto-save
+      function debounce(func, delay) {
+        let timeoutId;
+        return function (...args) {
+          clearTimeout(timeoutId);
+          timeoutId = setTimeout(() => func.apply(this, args), delay);
+        };
+      }
+
+      // Load saved scores from localStorage
+      function loadSavedScores() {
+        const savedScores = localStorage.getItem("matchScores");
+        if (savedScores) {
+          const scores = JSON.parse(savedScores);
+          const editableScores = document.querySelectorAll(".editable-score");
+          editableScores.forEach((score) => {
+            const matchupId = score.dataset.matchupId;
+            const matchIndex = score.dataset.matchIndex;
+            const team = score.dataset.team;
+            if (
+              scores[matchupId] &&
+              scores[matchupId][matchIndex] &&
+              scores[matchupId][matchIndex][team]
+            ) {
+              score.textContent = scores[matchupId][matchIndex][team];
+            }
+          });
+        }
+      }
+
+      // Call loadSavedScores after displaying the schedule
+      loadSavedScores();
+
+      function resetScores() {
+        const editableScores = document.querySelectorAll(".editable-score");
+        editableScores.forEach((score) => {
+          score.textContent = "0";
+        });
+
+        // Update the schedule with zero scores
+        schedule.forEach((matchup) => {
+          matchup.matches.forEach((match) => {
+            match.scoreA = 0;
+            match.scoreB = 0;
+          });
+        });
+
+        // Clear saved scores from localStorage
+        localStorage.removeItem("matchScores");
+
+        // Save the updated schedule to localStorage
+        saveScheduleToLocalStorage(schedule);
+
+        // Recalculate and display stats
+        const updatedStats = calculateDivisionStats(schedule);
+        displayDivisionStats(updatedStats);
+      }
+
+      // Add event listener for reset button
+      document
+        .getElementById("resetScoresButton")
+        .addEventListener("click", resetScores);
+    </script>
+  </body>
+</html>
